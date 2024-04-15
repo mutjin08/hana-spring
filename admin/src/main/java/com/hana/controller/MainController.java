@@ -18,15 +18,22 @@ public class MainController {
 
     private final AdminService adminService;
 
-    @Value("${app.url.chart-url}")
-    String chartUrl;
+    @Value("${app.url.server-url}")
+    String serverUrl;
 
     @RequestMapping("/")
     public String main(Model model){
-        model.addAttribute("charturl",chartUrl);
+        model.addAttribute("charturl",serverUrl);
+        model.addAttribute("serverurl",serverUrl);
+
         return "index";
     }
-
+    @RequestMapping("/websocket")
+    public String websocket(Model model){
+        model.addAttribute("serverurl",serverUrl);
+        model.addAttribute("center","websocket");
+        return "index";
+    }
     @RequestMapping("/logout")
     public String logout(HttpSession httpSession){
         if(httpSession != null){

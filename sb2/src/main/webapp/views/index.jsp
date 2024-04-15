@@ -2,6 +2,8 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!-- JSTL -->
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib uri="http://www.springframework.org/tags" prefix="spring" %>
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -25,6 +27,10 @@
     <%-- Custom API   --%>
     <script src="<c:url value="/js/0327.js" />"></script>
 
+    <%-- Web Socket Lib    --%>
+    <script src="<c:url value="/webjars/sockjs-client/sockjs.min.js"/> "></script>
+    <script src="<c:url value="/webjars/stomp-websocket/stomp.min.js"/> "></script>
+
     <style>
         .fakeimg {
             height: 200px;
@@ -35,7 +41,8 @@
 <body>
 
 <div class="jumbotron text-center" style="margin-bottom:0">
-    <h1>HTML5 & JavaScript</h1>
+    <h1><spring:message code="site.title"  arguments="aa,aa"  /></h1>
+    <h5><spring:message code="site.phone"   /></h5>
 </div>
 <c:choose>
     <c:when test="${sessionScope.id == null}">
@@ -58,6 +65,9 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="<c:url value="/logout" />">LOGOUT</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="<c:url value="/chat" />">Chat</a>
             </li>
         </ul>
 
