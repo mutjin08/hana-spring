@@ -2,22 +2,29 @@ package com.hana.controller;
 
 import com.hana.app.data.dto.BoardDto;
 import com.hana.app.data.dto.CustDto;
+import com.hana.app.data.entity.LoginCust;
+import com.hana.app.repository.LoginCustRepository;
 import com.hana.app.service.BoardService;
 import com.hana.app.service.CustService;
+import com.hana.util.FileUploadUtil;
+import com.hana.util.NcpUtil;
 import com.hana.util.StringEnc;
 import com.hana.util.WeatherUtil;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Controller
@@ -28,6 +35,8 @@ public class MainController {
     final CustService custService;
     final BoardService boardService;
     final BCryptPasswordEncoder encoder;
+    final LoginCustRepository loginCustRepository;
+
 
     @Value("${app.key.wkey}")
     String wkey;
@@ -35,6 +44,13 @@ public class MainController {
     String whkey;
     @Value("${app.url.serverurl}")
     String serverurl;
+    @Value("${app.dir.uploadimgdir}")
+    String uploadImgDir;
+
+    @Value("${app.key.ncp-id}")
+    String ncpId;
+    @Value("${app.key.ncp-secret}")
+    String ncpSecret;
 
     @RequestMapping("/")
     public String main(Model model) throws Exception {
@@ -54,6 +70,24 @@ public class MainController {
     public String login(Model model){
         model.addAttribute("center","login");
         return "index";
+    }
+    @RequestMapping("/summary")
+    public String summary(Model model){
+        model.addAttribute("center","summary");
+        return "index";
+    }
+    @RequestMapping("/summaryimpl")
+    @ResponseBody
+    public Object summaryimpl(@RequestParam("content") String content){
+        JSONObject result = (JSONObject) NcpUtil.getSummary(ncpId,ncpSecret,content);
+        return result;
+    }
+    @RequestMapping("/saveimg")
+    @ResponseBody
+    public String saveimg(@RequestParam("file") MultipartFile file) throws IOException {
+        String imgname = file.getOriginalFilename();
+        FileUploadUtil.saveFile(file, uploadImgDir);
+        return imgname;
     }
     @RequestMapping("/weather")
     public String weather(Model model){
@@ -77,11 +111,15 @@ public class MainController {
         return WeatherUtil.getWeather2("1835848", whkey);
     }
 
-    @RequestMapping("/logout")
-    public String logout(Model model, HttpSession httpSession){
+    @RequestMapping("/logoutimpl")
+    public String logoutimpl(Model model, HttpSession httpSession){
+        log.info("start Logout --------------------------------------");
         if(httpSession != null){
+            loginCustRepository.deleteById((String) httpSession.getAttribute("id"));
             httpSession.invalidate();
         }
+        log.info("end Logout --------------------------------------");
+
         return "index";
     }
     @RequestMapping("/loginimpl")
@@ -97,11 +135,18 @@ public class MainController {
             if(!encoder.matches(pwd,custDto.getPwd())){
                 throw new Exception();
             }
+            Optional<LoginCust> loginCust =  loginCustRepository.findById(id);
+            if(loginCust.isPresent()){
+                throw new Exception();
+            }
+            loginCustRepository.save(LoginCust.builder().loginId(id).build());
+
             httpSession.setAttribute("id", id);
 
         } catch (Exception e){
-            model.addAttribute("msg","ID또는 PWD가 틀렸습니다.");
+            model.addAttribute("msg","로그인 되어 있습니다.");
             model.addAttribute("center","login");
+            return "index";
             //throw new RuntimeException(e);
         }
         return "redirect:/";
@@ -117,6 +162,8 @@ public class MainController {
             custDto.setPwd(encoder.encode(custDto.getPwd()));
             custDto.setName(StringEnc.encryptor(custDto.getName()));
             custService.add(custDto);
+            loginCustRepository.save(LoginCust.builder().loginId(custDto.getId()).build());
+
             httpSession.setAttribute("id", custDto.getId());
         } catch (Exception e) {
             //throw new RuntimeException(e);
@@ -129,6 +176,11 @@ public class MainController {
     @RequestMapping("/register")
     public String register(Model model){
         model.addAttribute("center","register");
+        return "index";
+    }
+    @RequestMapping("/pic")
+    public String pic(Model model){
+        model.addAttribute("center","pic");
         return "index";
     }
 
